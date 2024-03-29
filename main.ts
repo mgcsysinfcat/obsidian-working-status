@@ -2,80 +2,143 @@ import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Set
 
 // Remember to rename these classes and interfaces!
 
-interface MyPluginSettings {
-	mySetting: string;
+interface WorkingStatusSettings {
+	debug: boolean;
+} 
+
+const DEFAULT_SETTINGS: WorkingStatusSettings = {
+	debug: false
 }
+const except_char = new RegExp(/[^ \r\0\n\t]/gm)
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
-}
+export default class WorkingStatus extends Plugin {
+	settings: WorkingStatusSettings;
+	start_time: number;
+	work_last_time: number;
+	work_start_time: number;
+	is_working: boolean;
+	start_len: number;
+	cph: number;
+	last_cph: number;
+	work_in_second: number;
+	rest_in_second: number;
+	is_debug: boolean;
+	get_valid() {
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (view) {
+			const data = view.editor.getValue();
+			const match = data.match(except_char);
+			if (match) {
+				if (this.is_debug) console.log("match", match);
+				return match;
+			} else {
+				return null
+			}
+		} else {
+			return null;
+		}
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+	}
+	step() {
+		const data = this.get_valid();
+		if (data) {
+			this.start_len = data.length;
 
+			this.start_time = this.work_start_time = Date.now();
+			this.last_cph = this.cph;
+			console.log(`${this.last_cph}: ${this.cph}`);
+			this.is_working = false;
+		}
+	}
+
+	get_count() {
+		const data = this.get_valid();
+		// Make sure the user is editing a Markdown file.
+		if (data) {
+			console.log(data.length);
+			let len = data.length - (this.start_len);
+			if (len < 0)
+				len = 0;
+			let time = (Date.now() - (this.start_time))
+
+			this.cph =
+				this.last_cph * 0.333 + ((len / time) * 3600 * 1000) * 0.666;
+			// if (this.is_debug) {
+				console.log(`${this.last_cph}: ${len} / ${time} = ${this.cph}`);
+				console.log(`working:${this.is_working}, work:${this.work_in_second}, rest:${this.rest_in_second}`)
+			// }
+
+			if (this.is_working) {
+				this.work_in_second += 1;
+			} else {
+				this.rest_in_second += 1;
+			}
+			// ...
+		} else {
+			if (this.is_debug) console.log("no view get \n");
+		}
+	}
+	secondsToHMS(seconds: number) {
+		var hours = Math.floor(seconds / 3600);
+		var minutes = Math.floor((seconds % 3600) / 60);
+		var remainingSeconds = Math.floor(seconds % 60);
+
+		var formattedTime = hours.toString().padStart(2, '0') + ':' +
+			minutes.toString().padStart(2, '0') + ':' +
+			remainingSeconds.toString().padStart(2, '0');
+
+		return formattedTime;
+	}
+	reset_status() {
+		this.start_time = this.work_start_time = this.work_last_time = Date.now();
+		this.start_len = 0//this.app.workspace.getActiveViewOfType(MarkdownView)?.editor.getValue();
+		this.cph = this.last_cph = 0;
+	}
 	async onload() {
+		this.reset_status();
+		this.is_working = false;
+		this.work_in_second = this.rest_in_second = 0;
 		await this.loadSettings();
 
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
+		// const item = this.addStatusBarItem();
+		// item.createEl("span", { text: this.www.toString() });
+		this.registerEvent(this.app.workspace.on('editor-change', (editor) => {
+			this.is_working = true;
+		}));
+		this.registerEvent(
+			this.app.workspace.on('active-leaf-change', (leaf) => {
+				if (leaf) {
+					const v = this.app.workspace.getActiveViewOfType(MarkdownView);
+					if (v)
+						this.start_len = v.data.length;
+				}
+
+			})
+		);
+
 		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
+		// ribbonIconEl.addClass('my-plugin-ribbon-class');
 
 		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
 		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
 
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-			}
-		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
+		this.addSettingTab(new SettingTab(this.app, this));
 
 		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
+		this.registerInterval(
+			window.setInterval(() => {
+				this.get_count();
+				statusBarItemEl.setText(`每小时字数：${String(Math.floor(this.cph))}
+									，工作时间：${this.secondsToHMS(this.work_in_second)}
+									，空闲时间：${this.secondsToHMS(this.rest_in_second)}`);
+				// console.log(this.www); 
+			}, 1000));
+		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
+		this.registerInterval(window.setInterval(() => {
+			this.step();
+		}, 2500));
 	}
 
 	onunload() {
@@ -91,44 +154,31 @@ export default class MyPlugin extends Plugin {
 	}
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
 
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
-}
-
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
-
-	constructor(app: App, plugin: MyPlugin) {
+class SettingTab extends PluginSettingTab {
+	plugin: WorkingStatus;
+	//
+	constructor(app: App, plugin: WorkingStatus) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
 
 	display(): void {
-		const {containerEl} = this;
+		const { containerEl } = this;
 
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName('Setting #1')
+			.setName('Debug Mode')
 			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
+			
+			.addToggle(t => {  t
+				.setValue(this.plugin.settings.debug)
+				.onChange( async v => {
+				this.plugin.settings.debug = v;
+				console.log("vvv:" , v,"s" ,this.plugin.settings);
+				await this.plugin.saveSettings();})
+			});
+
 	}
 }
