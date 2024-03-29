@@ -4,8 +4,7 @@
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "在状态栏显示每小时字数，工作时长，空闲时长",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
-	"isDesktopOnly": false
+	"author": "mmm",
+	"authorUrl": "https://github.com/mgcsysinfcat/",
+	"isDesktopOnly": true
 }
