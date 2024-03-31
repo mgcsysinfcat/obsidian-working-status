@@ -4,7 +4,7 @@ import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Set
 
 interface WorkingStatusSettings {
 	debug: boolean;
-} 
+}
 
 const DEFAULT_SETTINGS: WorkingStatusSettings = {
 	debug: false
@@ -64,8 +64,8 @@ export default class WorkingStatus extends Plugin {
 			this.cph =
 				this.last_cph * 0.333 + ((len / time) * 3600 * 1000) * 0.666;
 			// if (this.is_debug) {
-				console.log(`${this.last_cph}: ${len} / ${time} = ${this.cph}`);
-				console.log(`working:${this.is_working}, work:${this.work_in_second}, rest:${this.rest_in_second}`)
+			console.log(`${this.last_cph}: ${len} / ${time} = ${this.cph}`);
+			console.log(`working:${this.is_working}, work:${this.work_in_second}, rest:${this.rest_in_second}`)
 			// }
 
 			if (this.is_working) {
@@ -91,7 +91,12 @@ export default class WorkingStatus extends Plugin {
 	}
 	reset_status() {
 		this.start_time = this.work_start_time = this.work_last_time = Date.now();
-		this.start_len = 0//this.app.workspace.getActiveViewOfType(MarkdownView)?.editor.getValue();
+		const v = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (v) {
+			this.start_len = v.editor.getValue().length;
+		} else {
+			this.start_len = 0;
+		}
 		this.cph = this.last_cph = 0;
 	}
 	async onload() {
@@ -171,13 +176,15 @@ class SettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName('Debug Mode')
 			.setDesc('It\'s a secret')
-			
-			.addToggle(t => {  t
-				.setValue(this.plugin.settings.debug)
-				.onChange( async v => {
-				this.plugin.settings.debug = v;
-				console.log("vvv:" , v,"s" ,this.plugin.settings);
-				await this.plugin.saveSettings();})
+
+			.addToggle(t => {
+				t
+					.setValue(this.plugin.settings.debug)
+					.onChange(async v => {
+						this.plugin.settings.debug = v;
+						console.log("vvv:", v, "s", this.plugin.settings);
+						await this.plugin.saveSettings();
+					})
 			});
 
 	}
