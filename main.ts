@@ -79,11 +79,11 @@ export default class WorkingStatus extends Plugin {
 		}
 	}
 	secondsToHMS(seconds: number) {
-		var hours = Math.floor(seconds / 3600);
-		var minutes = Math.floor((seconds % 3600) / 60);
-		var remainingSeconds = Math.floor(seconds % 60);
+		let hours = Math.floor(seconds / 3600);
+		let minutes = Math.floor((seconds % 3600) / 60);
+		let remainingSeconds = Math.floor(seconds % 60);
 
-		var formattedTime = hours.toString().padStart(2, '0') + ':' +
+		let formattedTime = hours.toString().padStart(2, '0') + ':' +
 			minutes.toString().padStart(2, '0') + ':' +
 			remainingSeconds.toString().padStart(2, '0');
 
