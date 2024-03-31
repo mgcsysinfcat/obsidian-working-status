@@ -1,7 +1,7 @@
 {
 	"id": "working-status",
 	"name": "Working Status",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "0.15.0",
 	"description": "在状态栏显示每小时字数，工作时长，空闲时长",
 	"author": "mmm",
